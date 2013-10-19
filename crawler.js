@@ -38,44 +38,46 @@ function grabInternalUrls(options) {
         var xhr = new XMLHttpRequest;
         xhr.open('GET', curUrl.href);
         xhr.onload = function () {
-            if (this.status == 200 && this.getResponseHeader('content-type').substr(0, 9) == 'text/html') {
-                var onMatch = options.onMatch;
-                if (typeof onMatch == 'function') {
-                    onMatch(curUrl.href, this.response);
-                }          
-                var re = /<a[^>]+href\s*=\s*(?:'([^']+)|"([^"]+)|([^\s>]+))/gi;
-                var matches;
-                var matchedUrl;
-                var nextUrl;
-                while (matches = re.exec(this.response)) {                 
-                    if (matches[3]) {
-                        matchedUrl = matches[3];
-                    }
-                    else if (matches[2]) {
-                        matchedUrl = matches[2];
-                    }
-                    else if (matches[1]) {
-                        matchedUrl = matches[1];
-                    }
-                    matchedUrl = matchedUrl.replace(/#.*/, '');
-                    matchedUrl = matchedUrl.trim(matchedUrl);
-                    if (!/^https?:[\\/]{2}/.test(matchedUrl)) {
-                        if (/^\w+:/.test(matchedUrl)) {
-                            continue;
+            if (this.status == 200) {
+                if (this.getResponseHeader('content-type').substr(0, 9) == 'text/html') {
+                    var onMatch = options.onMatch;
+                    if (typeof onMatch == 'function') {
+                        onMatch(curUrl.href, this.response);
+                    }          
+                    var re = /<a[^>]+href\s*=\s*(?:'([^']+)|"([^"]+)|([^\s>]+))/gi;
+                    var matches;
+                    var matchedUrl;
+                    var nextUrl;
+                    while (matches = re.exec(this.response)) {                 
+                        if (matches[3]) {
+                            matchedUrl = matches[3];
                         }
-                        if (!/^[\\/]/.test(matchedUrl)) {
-                            matchedUrl = curUrl.pathname + matchedUrl;
+                        else if (matches[2]) {
+                            matchedUrl = matches[2];
                         }
-                    }
-                    nextUrl = parseUrl(matchedUrl);
-                    if (nextUrl.hostname == location.hostname) { 
-                        if (visitedUrls.indexOf(nextUrl.href) == -1) {
-                            if (typeof options.filterUrl == 'function') {
-                                if (!options.filterUrl(nextUrl.href)) {
-                                    continue;
-                                }
+                        else if (matches[1]) {
+                            matchedUrl = matches[1];
+                        }
+                        matchedUrl = matchedUrl.replace(/#.*/, '');
+                        matchedUrl = matchedUrl.trim(matchedUrl);
+                        if (!/^https?:[\\/]{2}/.test(matchedUrl)) {
+                            if (/^\w+:/.test(matchedUrl)) {
+                                continue;
                             }
-                            process(nextUrl);
+                            if (!/^[\\/]/.test(matchedUrl)) {
+                                matchedUrl = curUrl.pathname + matchedUrl;
+                            }
+                        }
+                        nextUrl = parseUrl(matchedUrl);
+                        if (nextUrl.hostname == location.hostname) { 
+                            if (visitedUrls.indexOf(nextUrl.href) == -1) {
+                                if (typeof options.filterUrl == 'function') {
+                                    if (!options.filterUrl(nextUrl.href)) {
+                                        continue;
+                                    }
+                                }
+                                process(nextUrl);
+                            }
                         }
                     }
                 }
@@ -93,17 +95,3 @@ function grabInternalUrls(options) {
         ++urlCounter;
     })(urlObj);
 }
-
-
-grabInternalUrls({
-    filterUrl: function (url) {
-        // ограничимся первым уровнем
-        return /^https?:\/\/[^/]+\/[^/?]+$/.test(url);
-    },
-    onMatch: function (url, content) { 
-        // console.log(url); 
-    },
-    onEnd: function (urls) {
-        console.log(urls);
-    }
-});
