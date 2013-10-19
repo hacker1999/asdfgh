@@ -30,18 +30,18 @@ var crawler = new (function Crawler () {
         var counter = 0;
         var obj = self.parseUrl(options.startUrl ? options.startUrl.replace(/#.*/, '') : '/');
         (function process(cur) {
-            urls.push(cur.href);
-            ++counter;
             var xhr = new XMLHttpRequest;
             xhr.open('GET', cur.href);
+            var isHTML;
             xhr.onreadystatechange = function () {
                 if (this.readyState == 2) {
-                    if (this.getResponseHeader('content-type').substr(0, 9) != 'text/html') {
+                    isHTML = this.getResponseHeader('content-type').substr(0, 9) == 'text/html';
+                    if (!isHTML) {
                         this.abort();
                     }
                 }
                 else if (this.readyState == 4) {
-                    if (this.status == 200) {
+                    if (isHTML && this.status == 200) {
                         var onMatch = options.onMatch;
                         if (typeof onMatch == 'function') {
                             onMatch(cur.href, this.response);
@@ -85,6 +85,8 @@ var crawler = new (function Crawler () {
                 }
             };
             xhr.send();
+            urls.push(cur.href);
+            ++counter;
         })(obj);
     };
 })();
