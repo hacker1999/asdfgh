@@ -1,97 +1,91 @@
-/**
- * --//--
- *
- * @param {Object} options
- * @param {String} options.startUrl url с которого начинаем обход сайта
- * @param {Function} options.filterUrl = function (url) { ... } дополнительный фильтр
- * @param {Function} options.onMatch = function (url, content) { ... }
- * @param {Function} options.onEnd = function (urls) { ... }
- */
-function grabInternalUrls(options) {
-    options = options || {};
-    var visitedUrls = [];
-    var urlCounter = 0;
-
-    function parseUrl(url) {
-        var obj = {};
+var crawler = new (function Crawler () {
+    this.parseUrl = function (str) {       
         var link = document.createElement('a');
-        link.href = url;
+        link.href = str;
+        var o = {};
         var keys = 'protocol host hostname port pathname search hash href'.split(' ');
-        var key;
-        for (var i = 0; i < keys.length; ++i) {
-            key = keys[i];
-            obj[key] = link[key];
+        var i = keys.length;
+        var k, v;
+        while (i--) {
+            k = keys[i];
+            v = link[k];
+            o[k] = v;
         }
-        return obj;
-    }
+        return o;
+    };
 
-    var url = options.startUrl == null ? '/' : options.startUrl;
-    url = url.replace(/#.*/, '');
-    var urlObj = parseUrl(url);
-    if (!/^https?:$/.test(urlObj.protocol)) {
-        throw 'Протокол не поддерживается';
-    }
-    if (urlObj.hostname != location.hostname) {
-        throw 'URL относится к другому Интернет-ресурсу';
-    } 
-    (function process(curUrl) {
-        var xhr = new XMLHttpRequest;
-        xhr.open('GET', curUrl.href);
-        xhr.onload = function () {
-            if (this.status == 200) {
-                if (this.getResponseHeader('content-type').substr(0, 9) == 'text/html') {
-                    var onMatch = options.onMatch;
-                    if (typeof onMatch == 'function') {
-                        onMatch(curUrl.href, this.response);
-                    }          
-                    var re = /<a[^>]+href\s*=\s*(?:'([^']+)|"([^"]+)|([^\s>]+))/gi;
-                    var matches;
-                    var matchedUrl;
-                    var nextUrl;
-                    while (matches = re.exec(this.response)) {                 
-                        if (matches[3]) {
-                            matchedUrl = matches[3];
-                        }
-                        else if (matches[2]) {
-                            matchedUrl = matches[2];
-                        }
-                        else if (matches[1]) {
-                            matchedUrl = matches[1];
-                        }
-                        matchedUrl = matchedUrl.replace(/#.*/, '');
-                        matchedUrl = matchedUrl.trim(matchedUrl);
-                        if (!/^https?:[\\/]{2}/.test(matchedUrl)) {
-                            if (/^\w+:/.test(matchedUrl)) {
-                                continue;
-                            }
-                            if (!/^[\\/]/.test(matchedUrl)) {
-                                matchedUrl = curUrl.pathname + matchedUrl;
-                            }
-                        }
-                        nextUrl = parseUrl(matchedUrl);
-                        if (nextUrl.hostname == location.hostname) { 
-                            if (visitedUrls.indexOf(nextUrl.href) == -1) {
-                                if (typeof options.filterUrl == 'function') {
-                                    if (!options.filterUrl(nextUrl.href)) {
-                                        continue;
-                                    }
+    /**
+     * --//--
+     *
+     * @param {Object} options
+     * @param {String} options.startUrl URL с которого начинаем обход сайта
+     * @param {RegExp} options.filterUrlRegex дополнительный фильтр
+     * @param {Function} options.onMatch = function (url, content) { ... }
+     * @param {Function} options.onEnd = function (urls) { ... }
+     */
+    this.run = function (options) {
+        options = options || {};
+        var self = this;
+        var urls = [];
+        var counter = 0;
+        var obj = self.parseUrl(options.startUrl ? options.startUrl.replace(/#.*/, '') : '/');
+        (function process(cur) {
+            urls.push(cur.href);
+            ++counter;
+            var xhr = new XMLHttpRequest;
+            xhr.open('GET', cur.href);
+            xhr.onreadystatechange = function () {
+                if (this.readyState == 2) {
+                    if (this.getResponseHeader('content-type').substr(0, 9) != 'text/html') {
+                        this.abort();
+                    }
+                }
+                else if (this.readyState == 4) {
+                    if (this.status == 200) {
+                        var onMatch = options.onMatch;
+                        if (typeof onMatch == 'function') {
+                            onMatch(cur.href, this.response);
+                        }                     
+                        var re = /<a(?!rea)[^>]+href=('|")(.*?)\1/gi;
+                        var match;
+                        var url;
+                        var next;
+                        while (match = re.exec(this.response)) {
+                            url = match[2];
+                            url = url.trim();
+                            url = url.replace(/#.*/, '');
+                            // console.log(url);
+                            if (!/^https?:[\\/]{2}/.test(url)) {
+                                if (/^\w+:/.test(url)) {
+                                    continue;
                                 }
-                                process(nextUrl);
+                                if (!/^[\\/]/.test(url)) {
+                                    url = cur.pathname.replace(/[^/]+$/, '') + url;
+                                }
                             }
+                            next = self.parseUrl(url);
+                            if (next.hostname == location.hostname) {
+                                if (urls.indexOf(next.href) == -1) {
+                                    if (options.filterUrlRegex) {
+                                        if (!options.filterUrlRegex.test(next.href)) {
+                                            continue;
+                                        }
+                                    }
+                                    process(next);
+                                }
+                            }
+                        }                      
+                    }
+                    if (--counter == 0) {
+                        var onEnd = options.onEnd;
+                        if (typeof onEnd == 'function') {
+                            onEnd(urls);
                         }
                     }
                 }
-            }
-            --urlCounter;
-            if (urlCounter == 0) {
-                var onEnd = options.onEnd;
-                if (typeof onEnd == 'function') {
-                    onEnd(visitedUrls);
-                }
-            }       
-        };
-        xhr.send();
-        visitedUrls.push(curUrl.href);       
-        ++urlCounter;
-    })(urlObj);
-}
+            };
+            xhr.send();
+        })(obj);
+    };
+})();
+// crawler.run({onMatch: function (url, content) { console.log(url); }, onEnd: function() { console.log('end'); }});
