@@ -1,5 +1,7 @@
-var crawler = new (function Crawler () {
-    this.parseUrl = function (str) {       
+var Сrawler = new (function () {
+    var self = this;
+
+    self.parseUrl = function (str) {       
         var link = document.createElement('a');
         link.href = str;
         var o = {};
@@ -17,15 +19,14 @@ var crawler = new (function Crawler () {
     /**
      * --//--
      *
-     * @param {Object} options
-     * @param {String} options.startUrl URL с которого начинаем обход сайта
+     * @param {object} options
+     * @param {string} options.startUrl URL с которого начинаем обход сайта
      * @param {RegExp} options.filterUrlRegex дополнительный фильтр
-     * @param {Function} options.onMatch = function (url, content) { ... }
-     * @param {Function} options.onEnd = function () { ... }
+     * @param {function} options.onMatch = function (url, content) { ... }
+     * @param {function} options.onEnd = function () { ... }
      */
-    this.run = function (options) {
+    self.run = function (options) {
         options = options || {};
-        var self = this;
         var urls = [];
         var counter = 0;
         var obj = self.parseUrl(options.startUrl ? options.startUrl.replace(/#.*/, '') : '/');
@@ -34,19 +35,19 @@ var crawler = new (function Crawler () {
             xhr.open('GET', cur.href);
             var isHtml;
             xhr.onreadystatechange = function () {
-                if (this.readyState == 2) {
-                    isHtml = this.getResponseHeader('content-type').split(';')[0] == 'text/html';
+                if (xhr.readyState == 2) {
+                    isHtml = xhr.getResponseHeader('content-type').split(';')[0] == 'text/html';
                     // принудительно отменяем получение тела ответа
                     if (!isHtml) {
-                        this.abort();
+                        xhr.abort();
                     }
                 }
-                else if (this.readyState == 4) {
-                    if (isHtml && this.status == 200) {
+                else if (xhr.readyState == 4) {
+                    if (isHtml && xhr.status == 200) {
                         var onMatch = options.onMatch;
                         if (typeof onMatch == 'function') {
                             try {
-                                onMatch(cur.href, this.response);
+                                onMatch(cur.href, xhr.response);
                             }
                             catch (err) {}
                         }                     
@@ -54,7 +55,7 @@ var crawler = new (function Crawler () {
                         var match;
                         var url;
                         var next;
-                        while (match = re.exec(this.response)) {
+                        while (match = re.exec(xhr.response)) {
                             url = match[2];
                             url = url.trim();
                             url = url.replace(/#.*/, '');
@@ -97,7 +98,7 @@ var crawler = new (function Crawler () {
 })();
 /* 
 console.log('--start');
-crawler.run({
+Сrawler.run({
     // startUrl: '/posts',
     // filterUrlRegex: /$/,
     onMatch: function (url, content) { 
