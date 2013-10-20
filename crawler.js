@@ -45,7 +45,10 @@ var crawler = new (function Crawler () {
                     if (isHtml && this.status == 200) {
                         var onMatch = options.onMatch;
                         if (typeof onMatch == 'function') {
-                            onMatch(cur.href, this.response);
+                            try {
+                                onMatch(cur.href, this.response);
+                            }
+                            catch (err) {}
                         }                     
                         var re = /<a(?!rea)[^>]+href=('|")(.*?)\1/gi;
                         var match;
@@ -85,6 +88,7 @@ var crawler = new (function Crawler () {
                     }
                 }
             };
+            // xhr.onerror = function (err) { console.log(err); };
             xhr.send();
             urls.push(cur.href);
             ++counter;
@@ -98,7 +102,8 @@ crawler.run({
     // filterUrlRegex: /$/,
     onMatch: function (url, content) { 
         var match = content.match(/<title>(.*)<\/title>/i);
-        console.log(match[0] + ' => ' + url); 
+        var title = match ? match[1] : '';
+        console.log(title + ' => ' + url); 
     }, 
     onEnd: function() { 
         console.log('--end'); 
