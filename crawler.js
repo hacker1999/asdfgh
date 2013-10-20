@@ -21,7 +21,7 @@ var crawler = new (function Crawler () {
      * @param {String} options.startUrl URL с которого начинаем обход сайта
      * @param {RegExp} options.filterUrlRegex дополнительный фильтр
      * @param {Function} options.onMatch = function (url, content) { ... }
-     * @param {Function} options.onEnd = function (urls) { ... }
+     * @param {Function} options.onEnd = function () { ... }
      */
     this.run = function (options) {
         options = options || {};
@@ -36,7 +36,7 @@ var crawler = new (function Crawler () {
             xhr.onreadystatechange = function () {
                 if (this.readyState == 2) {
                     isHtml = this.getResponseHeader('content-type').split(';')[0] == 'text/html';
-                    // принудительно отменяет получение тела ответа
+                    // принудительно отменяем получение тела ответа
                     if (!isHtml) {
                         this.abort();
                     }
@@ -83,7 +83,7 @@ var crawler = new (function Crawler () {
                     if (--counter < 1) {
                         var onEnd = options.onEnd;
                         if (typeof onEnd == 'function') {
-                            onEnd(urls);
+                            onEnd();
                         }
                     }
                 }
