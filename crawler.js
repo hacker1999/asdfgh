@@ -32,16 +32,17 @@ var crawler = new (function Crawler () {
         (function process(cur) {
             var xhr = new XMLHttpRequest;
             xhr.open('GET', cur.href);
-            var isHTML;
+            var isHtml;
             xhr.onreadystatechange = function () {
                 if (this.readyState == 2) {
-                    isHTML = this.getResponseHeader('content-type').substr(0, 9) == 'text/html';
-                    if (!isHTML) {
+                    isHtml = this.getResponseHeader('content-type').split(';')[0] == 'text/html';
+                    // принудительно отменяет получение тела ответа
+                    if (!isHtml) {
                         this.abort();
                     }
                 }
                 else if (this.readyState == 4) {
-                    if (isHTML && this.status == 200) {
+                    if (isHtml && this.status == 200) {
                         var onMatch = options.onMatch;
                         if (typeof onMatch == 'function') {
                             onMatch(cur.href, this.response);
@@ -76,7 +77,7 @@ var crawler = new (function Crawler () {
                             }
                         }                      
                     }
-                    if (--counter == 0) {
+                    if (--counter < 1) {
                         var onEnd = options.onEnd;
                         if (typeof onEnd == 'function') {
                             onEnd(urls);
@@ -90,4 +91,17 @@ var crawler = new (function Crawler () {
         })(obj);
     };
 })();
-// crawler.run({onMatch: function (url, content) { console.log(url); }, onEnd: function() { console.log('end'); }});
+/* 
+console.log('--start');
+crawler.run({
+    // startUrl: '/posts',
+    // filterUrlRegex: /$/,
+    onMatch: function (url, content) { 
+        var match = content.match(/<title>(.*)<\/title>/i);
+        console.log(match[0] + ' => ' + url); 
+    }, 
+    onEnd: function() { 
+        console.log('--end'); 
+    }
+});
+*/
