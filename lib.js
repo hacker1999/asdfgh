@@ -36,7 +36,6 @@ function template(str, data) {
 
 QueryString = new (function () {
     var self = this;
-
     self.parse = function (str, sep, eq) {
         sep = sep || '&';
         eq = eq || '=';
@@ -65,7 +64,7 @@ QueryString = new (function () {
         } 
         return hash;
     };
-
+    
     self.stringify = function (hash, sep, eq) {
         sep = sep || '&';
         eq = eq || '=';

@@ -97,17 +97,40 @@ var Сrawler = new (function () {
     };
 })();
 /* 
+
+
 console.log('--start');
+L = [];
 Сrawler.run({
-    // startUrl: '/posts',
-    // filterUrlRegex: /$/,
+    startUrl: '/suppliers/',
+    filterUrlRegex: /^[^?]+\/suppliers\/cat\/\d+\/(\?page=\d+)?$/,
     onMatch: function (url, content) { 
-        var match = content.match(/<title>(.*)<\/title>/i);
-        var title = match ? match[1] : '';
-        console.log(title + ' => ' + url); 
+        console.log(url);
+        var re = /<a href="\/send_message\/([^/]+)/g;
+        var match;
+        while (match = re.exec(content)) {
+            L.push(match[1]);
+        }
     }, 
     onEnd: function() { 
+        saveFile(L.join('\n'));
         console.log('--end'); 
     }
 });
+
 */
+
+function saveFile(data, name) {
+    name = name || '';
+    var link = document.createElement('a');
+    var blob = new Blob([data]);
+    var url = URL.createObjectURL(blob);
+    link.href = url; 
+    link.setAttribute('download', name);
+    link.style.display = 'none';  
+    document.body.appendChild(link);
+    link.onclick = function () {
+        document.body.removeChild(link);
+    };
+    link.click();
+};
